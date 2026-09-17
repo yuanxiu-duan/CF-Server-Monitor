@@ -1525,7 +1525,7 @@ Header：`X-Turnstile-Token: <token>`（当 `site_options.turnstile_enabled` 或
   "tags": "production,hk",
   "note": "Primary node",
   "price": "30.00",                   // 字符串，保存时自动转换为两位小数；"0" 或 "-1" 表示免费，空白表示未设置
-  "billing_cycle": "month",            // month | quarter | half_year | year | two_years | three_years | four_years | five_years
+  "billing_cycle": "month",            // month | quarter | half_year | year | two_years | three_years | four_years | five_years | one_time
   "auto_renewal": "0",                 // "0" | "1"
   "currency": "¥",                     // ¥ | $ | € | £ | ₽ | ₣ | ₹ | ₫ | ฿
   "expire_date": "2026-12-31",
@@ -1815,8 +1815,8 @@ UUID 缺失或格式非法时返回 `400 { "error": "invalidServerId", "code": 4
 | `tags`                                        | string             | 逗号分隔标签；编辑时最多保留 12 个，每个最长 32 字符 |
 | `note`                                        | string             | 管理备注；仅管理端 `list` / 导出返回，公共接口会删除 |
 | `price`                                       | string             | 价格金额文本，保存时规范为两位小数；`0` 或 `-1` 表示免费，空白表示未设置 |
-| `billing_cycle`                               | string             | `month` / `quarter` / `half_year` / `year` / `two_years` / `three_years` / `four_years` / `five_years` |
-| `auto_renewal`                                | string `"0"`/`"1"` | 是否启用自动续费                    |
+| `billing_cycle`                               | string             | `month` / `quarter` / `half_year` / `year` / `two_years` / `three_years` / `four_years` / `five_years` / `one_time`（一次性，无计费周期） |
+| `auto_renewal`                                | string `"0"`/`"1"` | 是否启用自动续费；`billing_cycle` 为 `one_time` 时**强制为 `"0"`**（一次性没有续费周期，到期即结束） |
 | `currency`                                    | string             | 货币符号：`¥` 人民币、`$` 美元、`€` 欧元、`£` 英镑、`₽` 卢布、`₣` 法郎、`₹` 卢比、`₫` 越南盾、`฿` 泰铢 |
 | `expire_date`                                 | string             | 到期日 `YYYY-MM-DD`          |
 | `traffic_limit`                               | string             | 流量上限文本                    |

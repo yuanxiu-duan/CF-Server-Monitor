@@ -595,7 +595,7 @@ import { applyMikusThemeOptions } from '../../utils/themeOptions.js'
 import { FRONTEND_WS_TIMEOUT_MINUTES_MAX, HISTORY } from '../../utils/constants.js'
 import { usePasswordVisibility } from '../../composables/usePasswordVisibility'
 import { useTurnstile } from './composables/useTurnstile'
-import { detectBillingCycle, detectCurrencySymbol, normalizeBillingCycle, normalizeCurrency, normalizePrice, renewExpireDateIfNeeded } from '../../utils/server.js'
+import { detectBillingCycle, detectCurrencySymbol, isRenewableBillingCycle, normalizeBillingCycle, normalizeCurrency, normalizePrice, renewExpireDateIfNeeded } from '../../utils/server.js'
 
 const trans = useTranslation()
 const route = useRoute()
@@ -2013,7 +2013,8 @@ const buildEditPayloadFromForm = (form) => {
   }
 
   const normalizedBillingCycle = normalizeBillingCycle(form.billing_cycle)
-  const normalizedAutoRenewal = form.auto_renewal ? '1' : '0'
+  // 一次性没有续费周期：不允许带自动续费（后端也会强制为 0）
+  const normalizedAutoRenewal = isRenewableBillingCycle(normalizedBillingCycle) && form.auto_renewal ? '1' : '0'
   const normalizedPrice = normalizePrice(form.price)
   const normalizedCurrency = normalizeCurrency(form.currency || detectCurrencySymbol(form.price) || '¥')
   const normalizedExpireDate = renewExpireDateIfNeeded(
@@ -2075,7 +2076,7 @@ const saveEdit = async () => {
   }
 
   const normalizedBillingCycle = normalizeBillingCycle(editForm.value.billing_cycle)
-  const normalizedAutoRenewal = editForm.value.auto_renewal ? '1' : '0'
+  const normalizedAutoRenewal = isRenewableBillingCycle(normalizedBillingCycle) && editForm.value.auto_renewal ? '1' : '0'
   const normalizedPrice = normalizePrice(editForm.value.price)
   const normalizedCurrency = normalizeCurrency(editForm.value.currency || detectCurrencySymbol(editForm.value.price) || '¥')
   const normalizedExpireDate = renewExpireDateIfNeeded(
