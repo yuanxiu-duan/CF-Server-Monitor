@@ -6,10 +6,11 @@ import { LATENCY_WINDOW, PING } from '../utils/constants'
 import { formatBillingPrice } from '../utils/server.js'
 
 export const DEFAULT_SERVER_CARD_CONFIG = {
-  show_price: true,
-  show_expire: true,
-  show_tf: true,
-  show_three_net_details: true,
+  // 未拿到站点配置时按关闭处理，避免把后台已关闭的价格/到期/流量信息展示出来。
+  show_price: false,
+  show_expire: false,
+  show_tf: false,
+  show_three_net_details: false,
   latency_window: {
     points: LATENCY_WINDOW.POINTS,
     hours: LATENCY_WINDOW.HOURS

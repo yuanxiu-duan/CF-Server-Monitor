@@ -311,6 +311,13 @@ export default {
           } : {}),
           is_public: sys.is_public === 'true',
           authorization: isLoggedIn,
+          // 展示开关：主题与前端在 /api/servers 返回前就能拿到正确的显示状态，
+          // 未登录访客也不会因为拿不到 sysConfig 而看到后台已关闭的内容。
+          // 取值口径与 /api/servers 的 sysConfig、后台设置面板保持一致（'true' / 'false'）。
+          show_price: sys.show_price === 'true',
+          show_expire: sys.show_expire === 'true',
+          show_tf: sys.show_tf === 'true',
+          show_three_net_details: sys.show_three_net_details === 'true',
           turnstile_enabled: turnstileEnabled,
           turnstile_login_enabled: turnstileEnabled || turnstileLoginEnabled,
           turnstile_site_key: sys.turnstile_site_key || '',

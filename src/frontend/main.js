@@ -9,6 +9,7 @@ import { initConfig, hasMultipleApiBases } from './utils/config'
 import { LAST_AGENT_VERSION, LAST_WORKERS_VERSION, VERSION, normalizeLiveSocketTimeoutMinutes } from './utils/api'
 import { resolveDisplayMode } from './utils/displayMode'
 import { getMikusAssetUrl, isMikusThemeEnabled, normalizeThemeOptions, setMikusThemeClass } from './utils/themeOptions'
+import { DEFAULT_SITE_SWITCHES, resolveSiteSwitches, aggregateSiteSwitches } from './utils/siteSwitches'
 import { applyDefaultTheme } from './composables/useTheme'
 import {
   clearTurnstileToken,
@@ -74,6 +75,8 @@ async function fetchConfig() {
     const result = await http.get('/api/config', { includeAuth: true, includeTurnstile: true })
     if (result.error) {
       return {
+        // 拿不到站点配置时按「全部关闭」处理，避免把后台已关闭的价格等信息展示给访客。
+        ...DEFAULT_SITE_SWITCHES,
         turnstile_enabled: false,
         turnstile_login_enabled: false,
         turnstile_site_key: '',
@@ -92,6 +95,7 @@ async function fetchConfig() {
     const data = result.data
     if (!data) {
       return {
+        ...DEFAULT_SITE_SWITCHES,
         turnstile_enabled: false,
         turnstile_login_enabled: false,
         turnstile_site_key: '',
@@ -130,6 +134,7 @@ async function fetchConfig() {
     LAST_AGENT_VERSION.value = lastAgentVersion
 
     return {
+      ...resolveSiteSwitches(data),
       turnstile_enabled: turnstileEnabled,
       turnstile_login_enabled: turnstileLoginEnabled,
       turnstile_site_key: turnstileSiteKey,
@@ -158,6 +163,7 @@ async function fetchConfig() {
     console.error('Failed to fetch config:', e)
   }
   return {
+    ...DEFAULT_SITE_SWITCHES,
     turnstile_enabled: false,
     turnstile_login_enabled: false,
     turnstile_site_key: '',
@@ -322,6 +328,7 @@ async function initApp() {
         return
       }
       config = first ? {
+        ...aggregateSiteSwitches(results.map(result => (!result.error && result.data) ? result.data : null)),
         turnstile_enabled: isTurnstileValueEnabled(first.data.turnstile_enabled),
         turnstile_login_enabled: isTurnstileValueEnabled(first.data.turnstile_login_enabled),
         turnstile_site_key: sharedTurnstileSite?.siteKey || first.data.turnstile_site_key || '',
@@ -339,7 +346,7 @@ async function initApp() {
         default_language: ['zh', 'en', 'auto'].includes(String(first.data.default_language || '').toLowerCase()) ? String(first.data.default_language).toLowerCase() : 'auto',
         frontend_ws_timeout_minutes: normalizeLiveSocketTimeoutMinutes(first.data.frontend_ws_timeout_minutes),
         theme_options: normalizeThemeOptions(first.data.theme_options)
-      } : { turnstile_enabled: false, turnstile_login_enabled: false, turnstile_site_key: '', turnstile_api_index: 0, version: '', last_workers_version: '', last_agent_version: '', verified: false, is_public: true, authorization: false, site_title: '', display_mode: 'bar', preferred_theme: 'auto', default_language: 'auto', frontend_ws_timeout_minutes: 0, theme_options: {} }
+      } : { ...DEFAULT_SITE_SWITCHES, turnstile_enabled: false, turnstile_login_enabled: false, turnstile_site_key: '', turnstile_api_index: 0, version: '', last_workers_version: '', last_agent_version: '', verified: false, is_public: true, authorization: false, site_title: '', display_mode: 'bar', preferred_theme: 'auto', default_language: 'auto', frontend_ws_timeout_minutes: 0, theme_options: {} }
       if (sharedTurnstileSite) {
         config.turnstile_enabled = true
         config.turnstile_site_key = sharedTurnstileSite.siteKey
@@ -349,7 +356,7 @@ async function initApp() {
       LAST_WORKERS_VERSION.value = config.last_workers_version || ''
       LAST_AGENT_VERSION.value = config.last_agent_version || ''
     } catch (_) {
-      config = { turnstile_enabled: false, turnstile_login_enabled: false, turnstile_site_key: '', turnstile_api_index: 0, version: '', last_workers_version: '', last_agent_version: '', verified: false, is_public: true, authorization: false, site_title: '', display_mode: 'bar', preferred_theme: 'auto', default_language: 'auto', frontend_ws_timeout_minutes: 0, theme_options: {} }
+      config = { ...DEFAULT_SITE_SWITCHES, turnstile_enabled: false, turnstile_login_enabled: false, turnstile_site_key: '', turnstile_api_index: 0, version: '', last_workers_version: '', last_agent_version: '', verified: false, is_public: true, authorization: false, site_title: '', display_mode: 'bar', preferred_theme: 'auto', default_language: 'auto', frontend_ws_timeout_minutes: 0, theme_options: {} }
     }
   } else {
     config = await fetchConfig()

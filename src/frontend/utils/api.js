@@ -5,6 +5,7 @@ import { ref } from 'vue'
 import { normalizeTimestamp } from './time.js'
 import { TIME } from './constants'
 import { resolveDisplayMode } from './displayMode.js'
+import { DEFAULT_SITE_SWITCHES, aggregateSiteSwitches } from './siteSwitches.js'
 
 export { getApiBases, getWsBase }
 
@@ -303,6 +304,7 @@ export const fetchServersAll = async () => {
   for (const result of results) {
     mergeSiteResult(mergedData, result, multiSite, localTitle)
   }
+  applyAggregatedSiteSwitches(mergedData, results)
 
   return mergedData
 }
@@ -313,10 +315,8 @@ const createEmptyMergedData = () => ({
   stats: { total: 0, online: 0, offline: 0, globalNetRx: 0, globalNetTx: 0, globalSpeedIn: 0, globalSpeedOut: 0 },
   regionStats: {},
   sysConfig: {
-    show_price: true,
-    show_expire: true,
-    show_tf: true,
-    show_three_net_details: true,
+    // 默认全部关闭：请求失败或站点未返回开关时，不能把后台已关闭的内容展示出来。
+    ...DEFAULT_SITE_SWITCHES,
     display_mode: 'bar',
     site_title: DEFAULT_SITE_TITLE,
     latency_window: {
@@ -325,6 +325,14 @@ const createEmptyMergedData = () => ({
     }
   }
 })
+
+// 多站点聚合：任一站点关闭即关闭（见 utils/siteSwitches.js）。
+const applyAggregatedSiteSwitches = (mergedData, results) => {
+  const switches = aggregateSiteSwitches(
+    (Array.isArray(results) ? results : []).map(result => result?.data?.sysConfig)
+  )
+  mergedData.sysConfig = { ...mergedData.sysConfig, ...switches }
+}
 
 const mergeSiteResult = (mergedData, { data, error, baseUrl }, multiSite, localTitle) => {
   if (error || !data) return
@@ -361,10 +369,7 @@ const mergeSiteResult = (mergedData, { data, error, baseUrl }, multiSite, localT
 
   if (data.sysConfig) {
     mergedData.sysConfig = {
-      show_price: data.sysConfig.show_price ?? mergedData.sysConfig.show_price,
-      show_expire: data.sysConfig.show_expire ?? mergedData.sysConfig.show_expire,
-      show_tf: data.sysConfig.show_tf ?? mergedData.sysConfig.show_tf,
-      show_three_net_details: data.sysConfig.show_three_net_details ?? mergedData.sysConfig.show_three_net_details,
+      ...mergedData.sysConfig,
       display_mode: resolveDisplayMode(data.sysConfig, mergedData.sysConfig.display_mode),
       site_title: multiSite ? localTitle : mergedData.sysConfig.site_title,
       latency_window: data.sysConfig.latency_window ?? mergedData.sysConfig.latency_window
@@ -380,9 +385,12 @@ export const fetchServersAllWithProgress = async (onResult) => {
   mergedData.sysConfig.site_title = multiSite ? localTitle : DEFAULT_SITE_TITLE
 
   let corsErrorSites = []
+  const switchResults = []
 
   await http.getAllWithProgress('/api/servers', (result) => {
     mergeSiteResult(mergedData, result, multiSite, localTitle)
+    if (result?.data?.sysConfig) switchResults.push(result)
+    applyAggregatedSiteSwitches(mergedData, switchResults)
     if (result.corsError && !corsErrorSites.includes(result.baseUrl)) corsErrorSites.push(result.baseUrl)
     onResult({ ...mergedData, corsErrorSites })
   })
