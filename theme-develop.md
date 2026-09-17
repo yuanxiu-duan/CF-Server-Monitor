@@ -726,7 +726,7 @@ interface Server {
   server_group: string;
   tags: string;
   price: string; // "0" 或 "-1" 表示免费，空白表示未设置
-  billing_cycle: string;
+  billing_cycle: string; // month | quarter | half_year | year | two_years | three_years | four_years | five_years | one_time（一次性，此时 auto_renewal 恒为 "0"）
   auto_renewal: string;
   currency: string;
   expire_date: string;

@@ -67,7 +67,9 @@ const BILLING_CYCLE_DAYS = Object.freeze({
   two_years: 730,
   three_years: 1095,
   four_years: 1460,
-  five_years: 1825
+  five_years: 1825,
+  // 一次性：没有计费周期 ⇒ 不计入月均成本；未到期时剩余价值按全额计（同「长期」分支）
+  one_time: 0
 })
 
 export const SUPPORTED_FINANCE_CURRENCIES = Object.freeze(Object.keys(FINANCE_CURRENCY_CONFIG))

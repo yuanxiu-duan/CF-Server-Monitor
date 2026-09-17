@@ -58,11 +58,12 @@
         <div class="form-group flex-1">
           <label class="form-label">{{ trans.autoRenewal }}</label>
           <div class="checkbox-item no-margin">
-            <input type="checkbox" v-model="editForm.auto_renewal">
-            <label>
+            <input type="checkbox" v-model="editForm.auto_renewal" :disabled="isOneTimeCycle">
+            <label :title="isOneTimeCycle ? trans.oneTimeNoRenewal : ''">
               <b>{{ trans.enabled }}</b>
             </label>
           </div>
+          <div v-if="isOneTimeCycle" class="one-time-hint">{{ trans.oneTimeNoRenewal }}</div>
         </div>
       </div>
 
@@ -265,7 +266,7 @@ import { computed, watch } from 'vue'
 import HelpTooltip from '../../../components/HelpTooltip.vue'
 import { PING_NODE_FIELDS, validatePingNode } from '../../../utils/pingNode.js'
 import { currentLang } from '../../../utils/i18n.js'
-import { BILLING_CYCLES, CURRENCY_OPTIONS, normalizePrice, renewExpireDateIfNeeded } from '../../../utils/server.js'
+import { BILLING_CYCLES, CURRENCY_OPTIONS, isRenewableBillingCycle, normalizePrice, renewExpireDateIfNeeded } from '../../../utils/server.js'
 
 const editForm = defineModel('editForm', { type: Object, required: true })
 
@@ -290,6 +291,7 @@ const pingNodeErrors = computed(() => Object.fromEntries(
 const hasPingNodeErrors = computed(() => Object.values(pingNodeErrors.value).some(Boolean))
 
 const billingCycleOptions = BILLING_CYCLES
+const isOneTimeCycle = computed(() => !isRenewableBillingCycle(editForm.value.billing_cycle))
 const currencyOptions = CURRENCY_OPTIONS
 const currencySelectOptions = computed(() => {
   const currentCurrency = String(editForm.value.currency || '').trim()
@@ -341,6 +343,11 @@ const openDatePicker = (event) => {
 watch(
   () => [editForm.value.auto_renewal, editForm.value.billing_cycle, editForm.value.expire_date],
   () => {
+    // 一次性没有续费周期：勾选自定时直接清掉自动续费
+    if (isOneTimeCycle.value) {
+      if (editForm.value.auto_renewal) editForm.value.auto_renewal = false
+      return
+    }
     if (!editForm.value.auto_renewal) return
     const renewal = renewExpireDateIfNeeded(
       editForm.value.expire_date,
@@ -373,3 +380,12 @@ const handleAutoUpdateChange = (event) => {
   emit('toggle-auto-update', nextValue)
 }
 </script>
+
+<style scoped>
+.one-time-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+</style>

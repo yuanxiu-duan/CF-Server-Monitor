@@ -10,7 +10,9 @@ export const BILLING_CYCLES = Object.freeze([
   { value: 'two_years', months: 24, labelZh: '两年', labelEn: 'Two years', shortLabelZh: '2年', shortLabelEn: '2Y' },
   { value: 'three_years', months: 36, labelZh: '三年', labelEn: 'Three years', shortLabelZh: '3年', shortLabelEn: '3Y' },
   { value: 'four_years', months: 48, labelZh: '四年', labelEn: 'Four years', shortLabelZh: '4年', shortLabelEn: '4Y' },
-  { value: 'five_years', months: 60, labelZh: '五年', labelEn: 'Five years', shortLabelZh: '5年', shortLabelEn: '5Y' }
+  { value: 'five_years', months: 60, labelZh: '五年', labelEn: 'Five years', shortLabelZh: '5年', shortLabelEn: '5Y' },
+  // 一次性：没有续费周期（months = 0），不参与自动续费，月均成本不计入
+  { value: 'one_time', months: 0, oneTime: true, labelZh: '一次性', labelEn: 'One-time', shortLabelZh: '一次性', shortLabelEn: 'Once' }
 ]);
 
 export const CURRENCY_OPTIONS = Object.freeze([
@@ -82,7 +84,15 @@ const CYCLE_ALIASES = new Map([
   ['4 years', 'four_years'],
   ['五年', 'five_years'],
   ['five_years', 'five_years'],
-  ['5 years', 'five_years']
+  ['5 years', 'five_years'],
+  ['一次性', 'one_time'],
+  ['一次性付费', 'one_time'],
+  ['一次性付款', 'one_time'],
+  ['一次', 'one_time'],
+  ['one_time', 'one_time'],
+  ['one-time', 'one_time'],
+  ['onetime', 'one_time'],
+  ['once', 'one_time']
 ]);
 
 const NORMALIZED_CURRENCIES = new Set(CURRENCY_OPTIONS.map(item => item.symbol));
@@ -143,6 +153,7 @@ export function detectBillingCycle(value) {
   const raw = String(value || '').trim().toLowerCase();
   if (!raw) return '';
 
+  if (/一次性|一次付费|一次付款|\bone[-_\s]?time\b|\bonce\b/i.test(raw)) return 'one_time';
   if (/五年|5\s*(y|yr|yrs|year|years)/i.test(raw)) return 'five_years';
   if (/四年|4\s*(y|yr|yrs|year|years)/i.test(raw)) return 'four_years';
   if (/三年|3\s*(y|yr|yrs|year|years)/i.test(raw)) return 'three_years';
@@ -168,6 +179,11 @@ export function normalizeBillingCycle(value) {
 export function getBillingCycleOption(value) {
   const normalized = normalizeBillingCycle(value);
   return BILLING_CYCLES.find(item => item.value === normalized) || BILLING_CYCLES[0];
+}
+
+// 一次性（无周期）不支持自动续费：续费逻辑、表单开关都以此为准。
+export function isRenewableBillingCycle(value) {
+  return getBillingCycleOption(value).months > 0;
 }
 
 export function isEnabledFlag(value) {
@@ -211,6 +227,8 @@ function addBillingCycleToDate(dateString, billingCycle) {
   if (!parsed) return String(dateString || '').trim();
 
   const monthsToAdd = getBillingCycleOption(billingCycle).months;
+  if (!(monthsToAdd > 0)) return String(dateString || '').trim();
+
   const zeroBasedMonth = parsed.month - 1 + monthsToAdd;
   const year = parsed.year + Math.floor(zeroBasedMonth / 12);
   const month = ((zeroBasedMonth % 12) + 12) % 12 + 1;
@@ -227,6 +245,11 @@ function utcDateStringWithOffset(now = Date.now(), offsetDays = 0) {
 export function renewExpireDateIfNeeded(expireDate, billingCycle, autoRenewal, now = Date.now(), renewBeforeDays = 0) {
   const original = String(expireDate || '').trim();
   if (!original || !parseDateOnly(original) || !isEnabledFlag(autoRenewal)) {
+    return { expire_date: original, renewed: false };
+  }
+
+  // 一次性：没有续费周期，到期即结束，不做任何续费。
+  if (!isRenewableBillingCycle(billingCycle)) {
     return { expire_date: original, renewed: false };
   }
 
