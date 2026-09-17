@@ -513,6 +513,10 @@ CORS_ALLOWED_ORIGINS=https://status.example.com,https://admin.example.com
   "version": "2.8.0 Beta",
   "is_public": true,
   "authorization": false,
+  "show_price": false,
+  "show_expire": true,
+  "show_tf": true,
+  "show_three_net_details": true,
   "turnstile_enabled": true,
   "turnstile_login_enabled": true,
   "turnstile_site_key": "1x00000000000000000000AA",
@@ -544,6 +548,7 @@ CORS_ALLOWED_ORIGINS=https://status.example.com,https://admin.example.com
 | `version`            | string       | 当前部署自身 Workers 版本                         |
 | `is_public`          | boolean      | 站点是否公开                                     |
 | `authorization`     | boolean      | 当前请求是否携带有效 JWT                           |
+| `show_price` / `show_expire` / `show_tf` / `show_three_net_details` | boolean | 站点展示开关，与 `/api/servers` 的 `sysConfig` 同源（后台「显示价格 / 显示到期时间 / 显示流量 / 显示三网详情」）；匿名请求也会返回，前端据此在 `/api/servers` 返回前就确定是否渲染价格等内容。**取值约定**：站点未设置或取值异常时按 `false`（不展示）处理 |
 | `turnstile_enabled`  | boolean      | 站点是否启用人机验证                             |
 | `turnstile_login_enabled` | boolean | 登录是否需要 Turnstile；全局 Turnstile 开启时该值也为 `true` |
 | `turnstile_site_key` | string       | Turnstile 前端公钥；前端拿到后渲染 widget          |
@@ -669,6 +674,8 @@ CORS_ALLOWED_ORIGINS=https://status.example.com,https://admin.example.com
 | `stats`       | 聚合统计：在线阈值 300 秒（5 分钟无上报视为离线）                                          |
 | `regionStats` | 按 ISO 区域码（大写）统计的服务器数                                                  |
 | `sysConfig`   | 当前站点开关：`show_price`、`show_expire`、`show_tf`、`show_three_net_details`、`display_mode`。主题配置请从 `/api/config` 的 `theme_options` 读取。~~旧版示例中的 `site_title` 不在该对象内。~~（2026-07-26 修订） |
+
+> **展示开关的取值约定（2026-09-17）**：这四个开关是**白名单**语义，只有站点配置里显式为 `'true'` 才是 `true`；缺失、请求失败或取值异常时前端按 `false` 处理（不展示）。前端同时从 `/api/config` 读取同一组字段，因此未登录访客在 `/api/servers` 返回（或失败）之前也不会渲染后台已关闭的价格、到期、流量等内容。多站点聚合时按「任一站点关闭即关闭」处理，未表态的站点不影响结果。
 
 > `/api/servers` 的 `latestReportUpdates` 每次请求都会读取 DO 实时状态，并与当前 Worker isolate 内约 5 分钟的最近上报回放合并。`servers[].ping` / `servers[].loss` 只在 `sysConfig.show_three_net_details === true` 时从 D1 最近 2 小时历史抽样返回，最多 20 个真实样本点；主题可从 `/api/config.latency_window` 读取这两个窗口参数。抽样结果在当前 Worker isolate 内缓存约 5 分钟；关闭三网详情时返回空数组且不触发这部分 D1 查询。抽样点保留真实上报时间，不做固定时间戳对齐，也不会用最近点补齐缺口。
 

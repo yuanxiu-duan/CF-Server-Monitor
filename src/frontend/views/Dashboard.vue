@@ -381,6 +381,7 @@ import { normalizeTimestamp as normalizeMetricTimestamp } from '../utils/time.js
 import { normalizeDashboardView, normalizeDisplayMode, resolveDisplayMode } from '../utils/displayMode.js'
 import { getPlaybackElapsedMs, resolvePlaybackCursor } from '../utils/playback.js'
 import { getMikusAssetUrl, isMikusThemeEnabled, normalizeThemeOptions, setMikusThemeClass } from '../utils/themeOptions.js'
+import { resolveSiteSwitches, hasAnySiteSwitch } from '../utils/siteSwitches.js'
 import {
   CURRENCY_SYMBOLS,
   DEFAULT_EXCHANGE_RATES,
@@ -399,10 +400,8 @@ const stats = ref({ total: '-', online: 0, offline: 0, globalNetRx: 0, globalNet
 const unknownStats = ref(0)
 const appConfig = inject('appConfig', null)
 const sysConfig = ref({
-  show_price: true,
-  show_expire: true,
-  show_tf: true,
-  show_three_net_details: true,
+  // 展示开关一律 fail-closed：只有 /api/config 或 /api/servers 明确开启才展示。
+  ...resolveSiteSwitches(appConfig),
   custom_ct_name: appConfig?.custom_ct_name || '电信',
   custom_cu_name: appConfig?.custom_cu_name || '联通',
   custom_cm_name: appConfig?.custom_cm_name || '移动',
@@ -966,6 +965,8 @@ const loadDashboardConfig = async () => {
     const siteTitle = String(config?.site_title || '').trim()
     sysConfig.value = {
       ...sysConfig.value,
+      // /api/config 已带展示开关时以它为准（这样访客在 /api/servers 返回前就能拿到正确状态）
+      ...(hasAnySiteSwitch(config) ? resolveSiteSwitches(config) : {}),
       site_title: hasMultipleApiBases() && localTitle ? localTitle : (siteTitle || sysConfig.value.site_title),
       display_mode: resolveDisplayMode(config),
       frontend_ws_timeout_minutes: normalizeLiveSocketTimeoutMinutes(config?.frontend_ws_timeout_minutes),
@@ -996,10 +997,7 @@ const refreshData = async () => {
         recomputeStats(now.value)
 
         sysConfig.value = {
-          show_price: data.sysConfig?.show_price ?? true,
-          show_expire: data.sysConfig?.show_expire ?? true,
-          show_tf: data.sysConfig?.show_tf ?? true,
-          show_three_net_details: data.sysConfig?.show_three_net_details ?? false,
+          ...resolveSiteSwitches(data.sysConfig),
           custom_ct_name: data.sysConfig?.custom_ct_name || sysConfig.value.custom_ct_name,
           custom_cu_name: data.sysConfig?.custom_cu_name || sysConfig.value.custom_cu_name,
           custom_cm_name: data.sysConfig?.custom_cm_name || sysConfig.value.custom_cm_name,
@@ -1039,10 +1037,7 @@ const refreshData = async () => {
     recomputeStats(now.value)
 
     sysConfig.value = {
-      show_price: data.sysConfig?.show_price ?? true,
-      show_expire: data.sysConfig?.show_expire ?? true,
-      show_tf: data.sysConfig?.show_tf ?? true,
-      show_three_net_details: data.sysConfig?.show_three_net_details ?? false,
+      ...resolveSiteSwitches(data.sysConfig),
       custom_ct_name: data.sysConfig?.custom_ct_name || sysConfig.value.custom_ct_name,
       custom_cu_name: data.sysConfig?.custom_cu_name || sysConfig.value.custom_cu_name,
       custom_cm_name: data.sysConfig?.custom_cm_name || sysConfig.value.custom_cm_name,
