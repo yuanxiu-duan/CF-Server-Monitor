@@ -4,7 +4,7 @@ import router from './router'
 import './styles/main.css'
 import './styles/light.css'
 import { applyDefaultLanguage, currentLang, resolveLanguagePreference, translations } from './utils/i18n'
-import { http } from './utils/http'
+import { http, DEFAULT_REQUEST_TIMEOUT_MS } from './utils/http'
 import { initConfig, hasMultipleApiBases } from './utils/config'
 import { LAST_AGENT_VERSION, LAST_WORKERS_VERSION, VERSION, normalizeLiveSocketTimeoutMinutes } from './utils/api'
 import { resolveDisplayMode } from './utils/displayMode'
@@ -43,11 +43,9 @@ const renderMikusStartupLoading = (siteTitle) => {
   const title = escapeHtml(String(siteTitle || 'Komari').trim() || 'Komari')
   const loliUrl = getMikusAssetUrl('loli.gif')
   const logoUrl = getMikusAssetUrl('miku.png')
-  const petals = Array.from({ length: 18 }, () => '<span class="mikus-background-petal"></span>').join('')
   loading.dataset.mikusRendered = '1'
   loading.classList.add('mikus-startup')
   loading.innerHTML = `
-    <div class="mikus-sakura-background mikus-startup-sakura" aria-hidden="true">${petals}</div>
     <div class="mikus-startup-loading">
       <img class="mikus-startup-gif" src="${loliUrl}" alt="Loading">
       <div class="mikus-startup-brand">
@@ -72,7 +70,15 @@ const applyStartupThemeOptions = (config) => {
 
 async function fetchConfig() {
   try {
-    const result = await http.get('/api/config', { includeAuth: true, includeTurnstile: true })
+    let result = await http.get('/api/config', { includeAuth: true, includeTurnstile: true, autoRedirect: false, timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS })
+
+    // 超时或 403：清掉可疑的 Turnstile 缓存，不带 header 重试走 bypass 路径
+    if (result.error && (result.timeout || result.status === 403)) {
+      localStorage.removeItem('turnstile_token')
+      localStorage.removeItem('turnstile_verified')
+      result = await http.get('/api/config', { includeAuth: true, includeTurnstile: false, includeTurnstileVerified: false, autoRedirect: false, timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS })
+    }
+
     if (result.error) {
       return {
         // 拿不到站点配置时按「全部关闭」处理，避免把后台已关闭的价格等信息展示给访客。
@@ -80,6 +86,7 @@ async function fetchConfig() {
         turnstile_enabled: false,
         turnstile_login_enabled: false,
         turnstile_site_key: '',
+        github_oauth_enabled: false,
         display_mode: 'bar',
         preferred_theme: 'auto',
         default_language: 'auto',
@@ -99,6 +106,7 @@ async function fetchConfig() {
         turnstile_enabled: false,
         turnstile_login_enabled: false,
         turnstile_site_key: '',
+        github_oauth_enabled: false,
         display_mode: 'bar',
         preferred_theme: 'auto',
         default_language: 'auto',
@@ -114,6 +122,7 @@ async function fetchConfig() {
     const turnstileEnabled = isTurnstileValueEnabled(data.turnstile_enabled)
     const turnstileLoginEnabled = isTurnstileValueEnabled(data.turnstile_login_enabled)
     const turnstileSiteKey = data.turnstile_site_key || ''
+    const githubOAuthEnabled = data.github_oauth_enabled === true || data.github_oauth_enabled === 'true'
     const version = data.version || ''
     const lastWorkersVersion = data.last_workers_version || ''
     const lastAgentVersion = data.last_agent_version || ''
@@ -138,6 +147,7 @@ async function fetchConfig() {
       turnstile_enabled: turnstileEnabled,
       turnstile_login_enabled: turnstileLoginEnabled,
       turnstile_site_key: turnstileSiteKey,
+      github_oauth_enabled: githubOAuthEnabled,
       custom_ct_name: data.custom_ct_name || '电信',
       custom_cu_name: data.custom_cu_name || '联通',
       custom_cm_name: data.custom_cm_name || '移动',
@@ -167,6 +177,7 @@ async function fetchConfig() {
     turnstile_enabled: false,
     turnstile_login_enabled: false,
     turnstile_site_key: '',
+    github_oauth_enabled: false,
     custom_ct_name: '电信', custom_cu_name: '联通', custom_cm_name: '移动', custom_bd_name: 'BGP',
     node_1_name: 'Node 1', node_2_name: 'Node 2', node_3_name: 'Node 3', node_4_name: 'Node 4',
     display_mode: 'bar',
@@ -188,7 +199,7 @@ async function verifyTurnstileByIndex(siteKey, apiIndex = 0) {
       callback: async (token) => {
         setTurnstileToken(token)
         try {
-          const result = await http.getByIndex('/api/config', apiIndex, { includeAuth: false, includeTurnstile: true, autoRedirect: false })
+          const result = await http.getByIndex('/api/config', apiIndex, { includeAuth: false, includeTurnstile: true, autoRedirect: false, timeoutMs: DEFAULT_REQUEST_TIMEOUT_MS })
           if (!result.error) {
             resolve(result.data && result.data.verified === true)
           } else {
