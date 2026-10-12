@@ -8,6 +8,7 @@ import { handleServerAPI, handleServersAPI } from './handlers/dashboard.js';
 import { handleTheme } from './handlers/theme.js';
 import { isValidThemeOptions, loadSettings, loadSiteSettings, loadAppearanceOptions, normalizeFrontendWsTimeoutMinutes, normalizeLongHistoryPoints, saveThemeOptions, setDebug, debug } from './utils/settings.js';
 import { omitNullLossProbeFields } from './handlers/dashboard.js';
+import { applyDisplaySwitchPrivacyToThemeOptions } from './utils/displaySwitches.js';
 import { checkAuth, simpleAuthResponse } from './middleware/auth.js';
 import { getServerDetail, getMetricsHistoryCache, setMetricsHistoryCache, getCacheDuration } from './utils/cache.js';
 import { AppError, createSuccessResponse, createUnauthorizedResponse, createBadRequestResponse, createNotFoundResponse, createErrorResponse } from './utils/errors.js';
@@ -343,7 +344,7 @@ export default {
           display_mode: appearanceOptions.display_mode || 'bar',
           preferred_theme: appearanceOptions.preferred_theme || 'auto',
           default_language: appearanceOptions.default_language || 'auto',
-          theme_options: appearanceOptions.theme_options || {},
+          theme_options: applyDisplaySwitchPrivacyToThemeOptions(appearanceOptions.theme_options || {}, { isLoggedIn, sys }),
           verified: verified,
           turnstile_verified: turnstileVerified,
           frontend_ws_timeout_minutes: Number(normalizeFrontendWsTimeoutMinutes(sys.frontend_ws_timeout_minutes)),

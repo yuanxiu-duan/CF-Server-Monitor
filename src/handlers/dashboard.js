@@ -10,6 +10,7 @@ import {
   getWorkerLatestReportUpdates
 } from '../utils/latestReportCache.js';
 import { markFrontendRealtimeActive } from '../utils/realtimeBroadcastGate.js';
+import { applyDisplaySwitchPrivacy } from '../utils/displaySwitches.js';
 import {
   DASHBOARD_LATENCY_WINDOW_HOURS,
   DASHBOARD_LATENCY_WINDOW_POINTS,
@@ -204,7 +205,9 @@ export async function handleServerAPI(request, env, sys) {
     long_history_points: Number(normalizeLongHistoryPoints(sys.long_history_points))
   };
   
-  return createSuccessResponse(omitNullLossProbeFields(withoutPrivateServerFields(server)));
+  return createSuccessResponse(omitNullLossProbeFields(
+    applyDisplaySwitchPrivacy(withoutPrivateServerFields(server), { isLoggedIn, sys })
+  ));
 }
 
 export async function handleServersAPI(request, env, sys) {
@@ -215,7 +218,9 @@ export async function handleServersAPI(request, env, sys) {
   }
   markFrontendRealtimeActive();
   
-  const results = (await getAllServers(env.DB, isLoggedIn)).map(withoutPrivateServerFields);
+  const results = (await getAllServers(env.DB, isLoggedIn))
+    .map(withoutPrivateServerFields)
+    .map(server => applyDisplaySwitchPrivacy(server, { isLoggedIn, sys }));
   const shouldIncludeLatencyHistory = sys.show_three_net_details === 'true';
   
   const serverIds = results.map(server => server.id).filter(Boolean);
