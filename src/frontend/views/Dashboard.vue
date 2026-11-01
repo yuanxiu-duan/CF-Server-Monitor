@@ -152,7 +152,7 @@
 
     <div id="view-card" class="view-panel" :class="{ active: isCardView, 'high-density': filteredServers.length > 12 }">
       <div v-if="groupedServers.length === 0" class="empty-state">
-        [!] {{ trans.noServer }}，请在 <a href="/admin#/admin" class="admin-link-color">{{ trans.backToAdmin }}</a> 中添加
+        [!] {{ trans.noServer }} <a href="/admin#/admin" class="admin-link-color">{{ trans.backToAdmin }}</a>{{ trans.noServerSuffix }}
       </div>
       <div v-else>
         <div v-for="group in groupedServers" :key="group.name" class="group-section">
@@ -406,6 +406,10 @@ const sysConfig = ref({
   custom_cu_name: appConfig?.custom_cu_name || '联通',
   custom_cm_name: appConfig?.custom_cm_name || '移动',
   custom_bd_name: appConfig?.custom_bd_name || 'BGP',
+  node_1_name: appConfig?.node_1_name || 'Node 1',
+  node_2_name: appConfig?.node_2_name || 'Node 2',
+  node_3_name: appConfig?.node_3_name || 'Node 3',
+  node_4_name: appConfig?.node_4_name || 'Node 4',
   frontend_ws_timeout_minutes: normalizeLiveSocketTimeoutMinutes(appConfig?.frontend_ws_timeout_minutes),
   display_mode: 'bar',
   site_title: DEFAULT_SITE_TITLE,
@@ -541,7 +545,7 @@ const filterOptionEntries = computed(() => Object.entries(filterOptions.value).m
   flagCode: code !== 'all' && code !== 'unknown' ? getFlagRegionCode(code) : ''
 })))
 
-const filterMoreLabel = computed(() => currentLang.value === 'zh' ? '更多' : 'MORE')
+const filterMoreLabel = computed(() => trans.value.filterMore)
 const visibleFilterOptions = computed(() => filterOptionEntries.value.slice(0, filterVisibleCount.value))
 const overflowFilterOptions = computed(() => filterOptionEntries.value.slice(filterVisibleCount.value))
 const isOverflowFilterActive = computed(() => overflowFilterOptions.value.some(item => item.code === currentFilter.value))
@@ -1002,6 +1006,10 @@ const refreshData = async () => {
           custom_cu_name: data.sysConfig?.custom_cu_name || sysConfig.value.custom_cu_name,
           custom_cm_name: data.sysConfig?.custom_cm_name || sysConfig.value.custom_cm_name,
           custom_bd_name: data.sysConfig?.custom_bd_name || sysConfig.value.custom_bd_name,
+          node_1_name: data.sysConfig?.node_1_name || sysConfig.value.node_1_name,
+          node_2_name: data.sysConfig?.node_2_name || sysConfig.value.node_2_name,
+          node_3_name: data.sysConfig?.node_3_name || sysConfig.value.node_3_name,
+          node_4_name: data.sysConfig?.node_4_name || sysConfig.value.node_4_name,
           frontend_ws_timeout_minutes: sysConfig.value.frontend_ws_timeout_minutes,
           display_mode: normalizeDisplayMode(data.sysConfig?.display_mode),
           site_title: sysConfig.value.site_title || DEFAULT_SITE_TITLE,
@@ -1042,6 +1050,10 @@ const refreshData = async () => {
       custom_cu_name: data.sysConfig?.custom_cu_name || sysConfig.value.custom_cu_name,
       custom_cm_name: data.sysConfig?.custom_cm_name || sysConfig.value.custom_cm_name,
       custom_bd_name: data.sysConfig?.custom_bd_name || sysConfig.value.custom_bd_name,
+      node_1_name: data.sysConfig?.node_1_name || sysConfig.value.node_1_name,
+      node_2_name: data.sysConfig?.node_2_name || sysConfig.value.node_2_name,
+      node_3_name: data.sysConfig?.node_3_name || sysConfig.value.node_3_name,
+      node_4_name: data.sysConfig?.node_4_name || sysConfig.value.node_4_name,
       frontend_ws_timeout_minutes: sysConfig.value.frontend_ws_timeout_minutes,
       display_mode: normalizeDisplayMode(data.sysConfig?.display_mode),
       site_title: sysConfig.value.site_title || DEFAULT_SITE_TITLE,

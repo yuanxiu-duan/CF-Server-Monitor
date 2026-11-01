@@ -147,8 +147,11 @@
           </select>
         </div>
         <div class="form-group flex-1">
-          <label class="form-label">{{ trans.networkInterface }}</label>
-          <input type="text" name="edit_interface" autocomplete="off" v-model.trim="editForm.interface" class="form-input" :placeholder="trans.networkInterfacePlaceholder">
+          <label class="form-label">
+            {{ trans.networkInterface }}
+            <HelpTooltip :text="trans.networkInterfaceHint" />
+          </label>
+          <input type="text" name="edit_interface" autocomplete="off" v-model.trim="editForm.interface" class="form-input" placeholder="eth0">
         </div>
         <div class="form-group flex-1">
           <label class="form-label">
@@ -273,7 +276,7 @@ import { computed, watch } from 'vue'
 import HelpTooltip from '../../../components/HelpTooltip.vue'
 import { PING_NODE_FIELDS, validatePingNode } from '../../../utils/pingNode.js'
 import { currentLang } from '../../../utils/i18n.js'
-import { BILLING_CYCLES, CURRENCY_OPTIONS, isRenewableBillingCycle, normalizePrice, renewExpireDateIfNeeded } from '../../../utils/server.js'
+import { BILLING_CYCLES, CURRENCY_OPTIONS, getLocalizedOptionField, isRenewableBillingCycle, normalizePrice, renewExpireDateIfNeeded } from '../../../utils/server.js'
 
 const editForm = defineModel('editForm', { type: Object, required: true })
 
@@ -311,10 +314,8 @@ const currencySelectOptions = computed(() => {
   ]
 })
 
-const cycleLabel = (item) => currentLang.value === 'zh' ? item.labelZh : item.labelEn
-const currencyLabel = (item) => currentLang.value === 'zh'
-  ? `${item.symbol} ${item.nameZh}`
-  : `${item.symbol} ${item.nameEn}`
+const cycleLabel = (item) => getLocalizedOptionField(item, 'label', currentLang.value)
+const currencyLabel = (item) => `${item.symbol} ${getLocalizedOptionField(item, 'name', currentLang.value)}`
 
 const normalizeTgNotifySetting = (value) => {
   if (value === true || value === 'true') return '5'
